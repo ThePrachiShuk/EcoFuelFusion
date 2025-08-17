@@ -746,8 +746,8 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
                     html.Span(" | Built with ❤️ using Dash & Python", className="app-version")
                 ]),
                 html.Div([
-                    html.A("Documentation", href="#", className="me-3"),
-                    html.A("GitHub", href="#", className="me-3"),
+                    html.A("Documentation", href="https://github.com/ThePrachiShuk/EcoFuelFusion/blob/main/README.md", className="me-3"),
+                    html.A("GitHub", href="https://github.com/ThePrachiShuk/EcoFuelFusion", className="me-3"),
                     html.A("Support", href="#"),
                 ], className="footer-links")
             ], className="footer-content")
