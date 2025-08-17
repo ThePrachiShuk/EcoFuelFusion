@@ -560,8 +560,8 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
                 ])
             ),
             dbc.Tab(
-                label="💡 Layman's Guide", 
-                tab_id="tab-layman-intuition",
+                label="💡 How it works", 
+                tab_id="tab-how-it-works-intuition",
                 tab_style=tab_style, active_tab_style=active_tab_style,
                 children=html.Div([
                     html.Div([
@@ -577,7 +577,7 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
                         className="fade-in"
                     ),
                     dbc.Progress(
-                        id="pipeline-progress-layman", 
+                        id="pipeline-progress-working", 
                         value=1, 
                         max=len(PIPELINE_STEPS_LAYMAN), 
                         className="my-4",
@@ -1367,4 +1367,5 @@ def route_from_landing(n_clicks, active):
 
 # ========== RUN APPLICATION ==========
 if __name__ == "__main__":
+
     app.run(debug=True, port=8050)
