@@ -158,7 +158,7 @@ custom_template_light = go.layout.Template(
 )
 
 # ========== HELPER FUNCTIONS AND LAYOUT COMPONENTS ==========
-PIPELINE_STEPS_LAYMAN = [
+PIPELINE_STEPS_WORKING = [
     {"title": "Step 1: The Raw Recipe.", "text": "You provide the 'recipe' for your fuel blend by entering the concentration and properties of each component. This is the basic input for the team.", "image": "tech_step1_input.png", "icon": "bi bi-keyboard-fill"},
     {"title": "Step 2: The Data Sleuths.", "text": "Before handing the recipe to the experts, the system's 'data detectives' analyze it from every angle. They calculate new, hidden insights, such as the **average** of all the properties and how much they **vary** from one another. This helps the experts understand not just what's in the blend, but how the ingredients interact.", "image": "tech_step2_features.png", "icon": "bi bi-gear-fill"},
     {"title": "Step 3: The Expert Panel.", "text": "The enhanced recipe is given to a diverse panel of experts, including a deep-learning specialist (the ANN), a master of logic trees (XGBoost/CatBoost), and a statistician (Linear/SVR). Each expert makes their own prediction independently.", "image": "tech_step3_base_models.png", "icon": "bi bi-people-fill"},
@@ -304,7 +304,7 @@ upload_style = {
 
 app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", children=[
     dcc.Store(id='theme-store', data='dark'),
-    dcc.Store(id='pipeline-step-store-layman', data=0),
+    dcc.Store(id='pipeline-step-store-working', data=0),
     dcc.Store(id='pipeline-step-store-technical', data=0),
     dcc.Store(id='batch-pred-store'),
     # Removed auto-redirect so the app lands and stays on Overview
@@ -561,7 +561,7 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
             ),
             dbc.Tab(
                 label="💡 How it Works", 
-                tab_id="tab-layman-intuition",
+                tab_id="tab-working-intuition",
                 tab_style=tab_style, active_tab_style=active_tab_style,
                 children=html.Div([
                     html.Div([
@@ -571,15 +571,15 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
                     ], className="modern-container fade-in"),
                     
                     dbc.Card(
-                        create_pipeline_step_card(PIPELINE_STEPS_LAYMAN[0]), 
-                        id="pipeline-display-card-layman", 
+                        create_pipeline_step_card(PIPELINE_STEPS_WORKING[0]), 
+                        id="pipeline-display-card-working", 
                         body=True,
                         className="fade-in"
                     ),
                     dbc.Progress(
-                        id="pipeline-progress-layman", 
+                        id="pipeline-progress-working", 
                         value=1, 
-                        max=len(PIPELINE_STEPS_LAYMAN), 
+                        max=len(PIPELINE_STEPS_WORKING), 
                         className="my-4",
                         style={'height': '8px'}
                     ),
@@ -588,13 +588,13 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
                             dbc.Button(html.Div([
                                 html.I(className="bi bi-arrow-left me-2"), 
                                 "Previous"
-                            ]), id="prev-step-button-layman", outline=True, color="info", className="w-100")
+                            ]), id="prev-step-button-working", outline=True, color="info", className="w-100")
                         ]),
                         dbc.Col([
                             dbc.Button(html.Div([
                                 "Next", 
                                 html.I(className="bi bi-arrow-right ms-2")
-                            ]), id="next-step-button-layman", outline=True, color="info", className="w-100")
+                            ]), id="next-step-button-working", outline=True, color="info", className="w-100")
                         ]),
                     ], justify="between", className="pipeline-nav")
                 ], className="mt-4")
@@ -886,20 +886,20 @@ def update_eda_graphs(active_tab, hist_x, scatter_x, scatter_y, theme):
 
 
 @app.callback(
-    Output('pipeline-display-card-layman', 'children'),
-    Output('pipeline-progress-layman', 'value'),
-    Output('pipeline-step-store-layman', 'data'),
-    Input('prev-step-button-layman', 'n_clicks'),
-    Input('next-step-button-layman', 'n_clicks'),
-    State('pipeline-step-store-layman', 'data')
+    Output('pipeline-display-card-working', 'children'),
+    Output('pipeline-progress-working', 'value'),
+    Output('pipeline-step-store-wokring', 'data'),
+    Input('prev-step-button-working', 'n_clicks'),
+    Input('next-step-button-working', 'n_clicks'),
+    State('pipeline-step-store-working', 'data')
 )
 def update_pipeline_step_layman(prev_clicks, next_clicks, current_step):
     button_id = ctx.triggered_id
-    if button_id == 'next-step-button-layman' and current_step < len(PIPELINE_STEPS_LAYMAN) - 1:
+    if button_id == 'next-step-button-working' and current_step < len(PIPELINE_STEPS_WORKING) - 1:
         current_step += 1
-    elif button_id == 'prev-step-button-layman' and current_step > 0:
+    elif button_id == 'prev-step-button-working' and current_step > 0:
         current_step -= 1
-    return create_pipeline_step_card(PIPELINE_STEPS_LAYMAN[current_step]), current_step + 1, current_step
+    return create_pipeline_step_card(PIPELINE_STEPS_WORKING[current_step]), current_step + 1, current_step
 
 
 @app.callback(
@@ -1369,4 +1369,5 @@ def route_from_landing(n_clicks, active):
 
 # ========== RUN APPLICATION ==========
 if __name__ == "__main__":
+
     app.run(debug=True, port=8050)
