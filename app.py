@@ -560,7 +560,7 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
                 ])
             ),
             dbc.Tab(
-                label="💡 Layman's Guide", 
+                label="💡 How it Works", 
                 tab_id="tab-layman-intuition",
                 tab_style=tab_style, active_tab_style=active_tab_style,
                 children=html.Div([
