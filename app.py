@@ -68,33 +68,43 @@ def load_ann_model(pt_path):
 
 # ========== ENSEMBLE PREDICTOR CLASS ==========
 class PropertyEnsemble:
-    def __init__(self, folder):
+    def __init__(self, folder: str):
         self.folder = folder
+        # Scalers
         self.x_scaler = joblib.load(os.path.join(folder, "x_scaler.pkl"))
         self.y_scaler = joblib.load(os.path.join(folder, "y_scaler.pkl"))
+        # Classical models
         models_to_load = [("xgb", "xgb.pkl"), ("lgb", "lgb.pkl"), ("svr", "svr.pkl"), ("lin", "lin.pkl")]
         self.models = {name: joblib.load(os.path.join(folder, fname)) for name, fname in models_to_load}
-        self.models["cat"] = CatBoostRegressor().load_model(os.path.join(folder, "cat.cbm"))
+        # CatBoost (load_model returns None)
+        cat_model = CatBoostRegressor()
+        cat_model.load_model(os.path.join(folder, "cat.cbm"))
+        self.models["cat"] = cat_model
+        # Meta model and ANN
         self.meta = joblib.load(os.path.join(folder, "meta.pkl"))
         self.ann = load_ann_model(os.path.join(folder, "ann.pt"))
         self.input_cols = list(getattr(self.x_scaler, "feature_names_in_", []))
 
-    def _align_df(self, df: pd.DataFrame):
-        if not self.input_cols: return df
+    def _align_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        if not self.input_cols:
+            return df
         df_aligned = df.copy()
         for col in self.input_cols:
-            if col not in df_aligned.columns: df_aligned[col] = 0
+            if col not in df_aligned.columns:
+                df_aligned[col] = 0
         return df_aligned[self.input_cols]
 
     def predict(self, df: pd.DataFrame):
         X_aligned = self._align_df(df)
         X_scaled = self.x_scaler.transform(X_aligned.values)
+        # ANN expects scaled inputs
         with torch.no_grad():
             ann_out_scaled = self.ann(torch.tensor(X_scaled, dtype=torch.float32)).numpy()
         base_preds_scaled = [ann_out_scaled]
         for name in ["xgb", "lgb", "cat", "svr", "lin"]:
             raw = self.models[name].predict(X_scaled)
-            base_preds_scaled.append(raw.reshape(-1, 1) if raw.ndim == 1 else raw)
+            base_preds_scaled.append(raw.reshape(-1, 1) if getattr(raw, 'ndim', 1) == 1 else raw)
+        # Inverse-scale each base model output independently
         stacked_unscaled = np.hstack([self.y_scaler.inverse_transform(p) for p in base_preds_scaled])
         final = self.meta.predict(stacked_unscaled).reshape(-1, 1)
         pred_std = np.std(stacked_unscaled, axis=1, keepdims=True)
@@ -156,10 +166,10 @@ PIPELINE_STEPS_LAYMAN = [
     {"title": "Step 5: The Final Verdict.", "text": "The manager weighs all the opinions and delivers the single, definitive prediction for the fuel blend property. This is a much more reliable result than relying on any single expert, as it leverages the collective intelligence of the entire team.", "image": "tech_step5_prediction.png", "icon": "bi bi-trophy-fill"},
 ]
 PIPELINE_STEPS_TECHNICAL = [
-    {"title": "Step 1 & 2: Raw Data & Feature Engineering", "text": "The system starts with a `5x10` matrix of component properties and a `1x5` vector of component concentrations. This raw input is transformed into a richer feature set. The pipeline calculates a wide array of new features, including: weighted averages for each property, and statistical features such as the `mean` and `standard deviation` of all 10 properties across the 5 components. This enriched feature set is then standardized using a `StandardScaler`.", "image": "tech_step1_feature_engineering.png", "icon": "bi bi-keyboard-fill"},
-    {"title": "Step 3: Base Learner Predictions (Level-0 Models)", "text": "The standardized features are fed into a diverse collection of base models. These models, though trained for the same task, use different algorithms and, therefore, learn different patterns from the data. This diversity is key to ensemble learning. The base learners in this ensemble are a **Neural Network (ANN)**, **XGBoost**, **LightGBM**, **CatBoost**, **SVR**, and **Linear Regression**. Each of these models outputs its own prediction for the target property.", "image": "tech_step2_base_learners.png", "icon": "bi bi-people-fill"},
-    {"title": "Step 4: Stacking & Meta-Model (Level-1 Model)", "text": "This is the core of the ensemble. The predictions from the six base learners are not directly averaged. Instead, they are 'stacked' together to form a new input vector. This new input vector is given to a final **meta-model** which is trained to find the optimal way to combine the base predictions, correcting their biases and reducing their variance.", "image": "tech_step3_stacking_meta_model.png", "icon": "bi bi-person-check-fill"},
-    {"title": "Step 5: Final Ensemble Prediction", "text": "The output from the meta-model is the final, definitive prediction for the fuel blend property. This stacked ensemble approach is a form of **stacked generalization**, which is widely recognized as one of the most powerful techniques in machine learning for improving predictive performance.", "image": "tech_step5_final_prediction.png", "icon": "bi bi-trophy-fill"},
+    {"title": "Step 1 & 2: Raw Data & Feature Engineering", "text": "The system starts with a `5x10` matrix of component properties and a `1x5` vector of component concentrations. This raw input is transformed into a richer feature set. The pipeline calculates a wide array of new features, including: weighted averages for each property, and statistical features such as the `mean` and `standard deviation` of all 10 properties across the 5 components. This enriched feature set is then standardized using a `StandardScaler`.", "image": "tech_step1_input.png", "icon": "bi bi-keyboard-fill"},
+    {"title": "Step 3: Base Learner Predictions (Level-0 Models)", "text": "The standardized features are fed into a diverse collection of base models. These models, though trained for the same task, use different algorithms and, therefore, learn different patterns from the data. This diversity is key to ensemble learning. The base learners in this ensemble are a **Neural Network (ANN)**, **XGBoost**, **LightGBM**, **CatBoost**, **SVR**, and **Linear Regression**. Each of these models outputs its own prediction for the target property.", "image": "tech_step3_base_models.png", "icon": "bi bi-people-fill"},
+    {"title": "Step 4: Stacking & Meta-Model (Level-1 Model)", "text": "This is the core of the ensemble. The predictions from the six base learners are not directly averaged. Instead, they are 'stacked' together to form a new input vector. This new input vector is given to a final **meta-model** which is trained to find the optimal way to combine the base predictions, correcting their biases and reducing their variance.", "image": "tech_step4_meta_model.png", "icon": "bi bi-person-check-fill"},
+    {"title": "Step 5: Final Ensemble Prediction", "text": "The output from the meta-model is the final, definitive prediction for the fuel blend property. This stacked ensemble approach is a form of **stacked generalization**, which is widely recognized as one of the most powerful techniques in machine learning for improving predictive performance.", "image": "tech_step5_prediction.png", "icon": "bi bi-trophy-fill"},
 ]
 
 def create_pipeline_step_card(step_data):
@@ -684,38 +694,63 @@ app.layout = html.Div(id="theme-root", className="theme-dark", children=[
     Input({'type': 'percentage-input', 'index': ALL}, 'value'),
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
+    State({'type': 'prop-input', 'index': ALL}, 'value'),
     prevent_initial_call=True
 )
-def sync_percentages_and_upload(slider_vals, input_vals, contents, filename):
+def sync_percentages_and_upload(slider_vals, input_vals, contents, filename, prop_vals_state):
     trig = ctx.triggered_id
+    slider_n = len(slider_vals or [])
+    input_n = len(input_vals or [])
+    prop_n = len(prop_vals_state or [])
+    # Helpers: list-shaped no_update for ALL-pattern outputs
+    no_sliders = [no_update] * slider_n
+    no_inputs = [no_update] * input_n
+    no_props = [no_update] * prop_n
     # Upload handler
     if trig == 'upload-data' and contents is not None:
         df = parse_contents_headerless(contents, filename)
         if not isinstance(df, pd.DataFrame):
-            return no_update, no_update, no_update, df
+            return no_sliders, no_inputs, no_props, df
         if len(df) != 1 or len(df.columns) < 55:
             error_msg = dbc.Alert("Error: CSV must have one row with at least 55 columns.", color="danger")
-            return no_update, no_update, no_update, error_msg
+            return no_sliders, no_inputs, no_props, error_msg
         try:
             row = df.iloc[0]
-            sliders = [max(0, min(100, float(row[i]))) for i in range(5)]
-            props = [float(row[i]) for i in range(5, 55)]
+            sliders_raw = [max(0, min(100, float(row[i]))) for i in range(5)]
+            sliders = [int(round(v)) for v in sliders_raw[:slider_n]]
+            sliders_inputs = [int(round(v)) for v in sliders_raw[:input_n]]
+            props_raw = [float(row[i]) for i in range(5, 55)]
+            props = props_raw[:prop_n]
             msg = dbc.Alert(f"Successfully loaded headerless data from {filename}", color="success")
-            return sliders, sliders, props, msg
+            return sliders, sliders_inputs, props, msg
         except Exception as e:
             error_msg = dbc.Alert(f"Error processing data by position: {e}", color="danger")
-            return no_update, no_update, no_update, error_msg
+            return no_sliders, no_inputs, no_props, error_msg
 
-    # Slider changed -> mirror to inputs
+    # Slider changed -> mirror to inputs only
     if isinstance(trig, dict) and trig.get('type') == 'percentage-slider':
-        return slider_vals, slider_vals, no_update, no_update
+        # Target inputs cast to ints
+        i_target = [int(v or 0) for v in (slider_vals or [])][:input_n]
+        i_current = [
+            (int(v) if v not in (None, "") else 0) for v in (input_vals or [])
+        ][:input_n]
+        if i_current == i_target:
+            return no_sliders, no_inputs, no_props, no_update
+        return no_sliders, i_target, no_props, no_update
 
-    # Number input changed -> sanitize and mirror to sliders
+    # Number input changed -> sanitize and mirror to sliders only
     if isinstance(trig, dict) and trig.get('type') == 'percentage-input':
-        sanitized = [max(0, min(100, int(v) if v is not None and v != '' else 0)) for v in input_vals]
-        return sanitized, sanitized, no_update, no_update
-
-    return no_update, no_update, no_update, no_update
+        sanitized = [
+            max(0, min(100, int(float(v)) if v not in (None, "") else 0))
+            for v in (input_vals or [])
+        ]
+        s_target = sanitized[:slider_n]
+        s_current = [int(v or 0) for v in (slider_vals or [])][:slider_n]
+        if s_current == s_target:
+            return no_sliders, no_inputs, no_props, no_update
+        return s_target, no_inputs, no_props, no_update
+    
+    return no_sliders, no_inputs, no_props, no_update
 
 
 @app.callback(
@@ -1122,5 +1157,4 @@ def route_from_landing(n_clicks, n_intervals, active):
 
 # ========== RUN APPLICATION ==========
 if __name__ == "__main__":
-
     app.run(debug=True, port=8050)
