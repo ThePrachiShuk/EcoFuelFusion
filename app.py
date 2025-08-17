@@ -851,13 +851,17 @@ def update_eda_graphs(active_tab, hist_x, scatter_x, scatter_y, theme):
     )
     fig_corr.update_layout(height=max(600, len(corr.columns) * 25), template=tpl)
 
-    # Histogram
+    # Histogram (theme-consistent colors + subtle outline)
     if hist_x:
+        bar_color = '#90caf9' if theme == 'light' else '#64ffda'
+        line_color = 'rgba(27,42,65,0.55)' if theme == 'light' else 'rgba(255,255,255,0.28)'
         fig_hist = px.histogram(
-            DF_EDA, x=hist_x, title=f"Distribution of {hist_x}",
-            color_discrete_sequence=['#64ffda']
+            DF_EDA, x=hist_x, title=f"Distribution of {hist_x}", nbins=30,
+            color_discrete_sequence=[bar_color]
         )
-        fig_hist.update_layout(template=tpl)
+        fig_hist.update_traces(marker=dict(color=bar_color, opacity=0.9,
+                               line=dict(color=line_color, width=0.8)))
+        fig_hist.update_layout(template=tpl, bargap=0.05)
     else:
         fig_hist = empty_fig.update_layout(title_text="Select a variable for histogram")
 

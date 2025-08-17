@@ -1667,6 +1667,48 @@ body::before {
 	background-color: rgba(240, 248, 255, 0.9) !important;
 }
 
+/* ===== OVERLAY FIX (EDA only): Ensure EDA dropdown menus are above EDA Plotly graphs/modebar ===== */
+/* Raise only EDA dropdown menus */
+.eda-hist-dropdown .Select-menu-outer,
+.eda-scatter-dropdown .Select-menu-outer {
+	z-index: 5000 !important;
+}
+/* Lower only EDA Plotly modebars */
+#eda-graph-hist .modebar,
+#eda-graph-scatter .modebar,
+#eda-graph-corr .modebar {
+	z-index: 50 !important;
+}
+/* Lower only EDA modebar containers */
+#eda-graph-hist .modebar-container,
+#eda-graph-scatter .modebar-container,
+#eda-graph-corr .modebar-container {
+	z-index: 50 !important;
+}
+/* Reduce stacking context only for EDA plot containers */
+#eda-graph-hist,
+#eda-graph-hist .svg-container,
+#eda-graph-hist .plot-container,
+#eda-graph-hist .js-plotly-plot,
+#eda-graph-scatter,
+#eda-graph-scatter .svg-container,
+#eda-graph-scatter .plot-container,
+#eda-graph-scatter .js-plotly-plot,
+#eda-graph-corr,
+#eda-graph-corr .svg-container,
+#eda-graph-corr .plot-container,
+#eda-graph-corr .js-plotly-plot {
+	position: relative !important;
+	z-index: 1 !important;
+}
+/* Ensure EDA dropdown wrappers sit above plots */
+.eda-hist-dropdown,
+.eda-scatter-dropdown {
+	position: relative;
+	z-index: 12000; /* ensure wrapper outranks graph */
+	transform: translateZ(0); /* new stacking context for Safari/Chrome */
+}
+
 /* Muted text consistency */
 .theme-dark .text-muted,
 .theme-dark .card .text-muted {
@@ -1854,24 +1896,28 @@ body::before {
 /* Prevent clipping from parent card and allow large menu */
 .eda-card {
 	overflow: visible !important;
+	position: relative;
+	z-index: 3000; /* ensure controls in this card float above graphs below */
 }
 .eda-card .card-body {
 	overflow: visible !important;
 }
-.eda-hist-dropdown .Select-menu-outer {
+.eda-hist-dropdown .Select-menu-outer,
+.eda-hist-dropdown .Select-menu {
 	max-height: 80vh !important; /* near full screen */
 	overflow-y: auto !important;
-	z-index: 2000 !important;
+	z-index: 10050 !important; /* above plotly modebar */
 }
 .theme-light .eda-hist-dropdown .Select-menu-outer {
 	max-height: 80vh !important;
 }
 
 /* Scatter dropdowns: tall menu + no clipping */
-.eda-scatter-dropdown .Select-menu-outer {
+.eda-scatter-dropdown .Select-menu-outer,
+.eda-scatter-dropdown .Select-menu {
 	max-height: 80vh !important;
 	overflow-y: auto !important;
-	z-index: 2000 !important;
+	z-index: 10050 !important; /* above plotly modebar */
 }
 .theme-light .eda-scatter-dropdown .Select-menu-outer {
 	max-height: 80vh !important;
