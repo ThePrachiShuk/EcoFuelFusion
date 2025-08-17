@@ -746,8 +746,8 @@ app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", child
                     html.Span(" | Built with ❤️ using Dash & Python", className="app-version")
                 ]),
                 html.Div([
-                    html.A("Documentation", href="https://github.com/ThePrachiShuk/EcoFuelFusion/blob/main/README.md", className="me-3"),
-                    html.A("GitHub", href="https://github.com/ThePrachiShuk/EcoFuelFusion", className="me-3"),
+                    html.A("Documentation", href="#", className="me-3"),
+                    html.A("GitHub", href="#", className="me-3"),
                     html.A("Support", href="#"),
                 ], className="footer-links")
             ], className="footer-content")
@@ -1162,7 +1162,9 @@ def on_batch_upload(contents, filename, theme):
                 "Download output.csv"
             ]), id='btn-download-batch', color='primary', className='mb-3')
         ], className='d-flex justify-content-between align-items-center'),
-        html.Div(table)
+        html.Div(table),
+        # Ensure the download target exists after this section is dynamically updated
+        dcc.Download(id='download-batch-csv')
     ]
     # Store CSV in memory as records
     return out_df.to_dict('records'), body
