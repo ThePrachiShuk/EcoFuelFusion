@@ -191,6 +191,6 @@ Deployment instructions will be added once configuration is finalized.
 
 ## ⚖️ License  
 
-© 2025 **EcoFuelFusion.ai** 
+© 2025 **EcoFuelFusion.ai**.
 All rights reserved. This project is for educational and research purposes only.
 Unauthorized copying, modification, or distribution of this project is prohibited without explicit permission.
