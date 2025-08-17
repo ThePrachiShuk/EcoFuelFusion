@@ -110,18 +110,18 @@
 		const root = document.getElementById("theme-root") || document;
 		bootstrap(root);
 
-		// Observe dynamic changes (Dash renders/updates)
+		// Observe dynamic changes (Dash renders/updates) with debounce to reduce churn
+		let refreshTimer = null;
 		const mo = new MutationObserver((mutations) => {
-			let needsRefresh = false;
 			for (const m of mutations) {
 				if (m.addedNodes && m.addedNodes.length) {
-					needsRefresh = true;
+					if (refreshTimer) clearTimeout(refreshTimer);
+					refreshTimer = setTimeout(() => {
+						bootstrap(root);
+						refreshTimer = null;
+					}, 60); // small debounce window
 					break;
 				}
-			}
-			if (needsRefresh) {
-				// Re-wire anchors and reveal classes for new nodes
-				bootstrap(root);
 			}
 		});
 		mo.observe(root, { childList: true, subtree: true });

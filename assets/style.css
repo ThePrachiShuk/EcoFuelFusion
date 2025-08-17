@@ -674,6 +674,9 @@ body::before {
 	border-radius: 10px !important;
 	backdrop-filter: blur(20px);
 	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+	/* Show at least ~5 options (with optionHeight ≈36px) */
+	max-height: 240px !important;
+	overflow-y: auto !important;
 }
 
 .VirtualizedSelectOption {
@@ -1602,6 +1605,9 @@ body::before {
 .theme-light .Select-menu-outer {
 	background: #ffffff !important;
 	border: 1px solid rgba(17, 86, 140, 0.2) !important;
+	/* Show at least ~5 options (with optionHeight ≈36px) */
+	max-height: 240px !important;
+	overflow-y: auto !important;
 }
 .theme-light .VirtualizedSelectOption {
 	color: #1b2a41 !important;
@@ -1839,6 +1845,82 @@ body::before {
 	}
 }
 
-.dash-debug-menu__outer, .dash-debug-menu { 
-	display: none !important; 
+.dash-debug-menu__outer,
+.dash-debug-menu {
+	display: none !important;
+}
+
+/* ===== HISTOGRAM DROPDOWN: FULL MENU HEIGHT ===== */
+/* Prevent clipping from parent card and allow large menu */
+.eda-card {
+	overflow: visible !important;
+}
+.eda-card .card-body {
+	overflow: visible !important;
+}
+.eda-hist-dropdown .Select-menu-outer {
+	max-height: 80vh !important; /* near full screen */
+	overflow-y: auto !important;
+	z-index: 2000 !important;
+}
+.theme-light .eda-hist-dropdown .Select-menu-outer {
+	max-height: 80vh !important;
+}
+
+/* Scatter dropdowns: tall menu + no clipping */
+.eda-scatter-dropdown .Select-menu-outer {
+	max-height: 80vh !important;
+	overflow-y: auto !important;
+	z-index: 2000 !important;
+}
+.theme-light .eda-scatter-dropdown .Select-menu-outer {
+	max-height: 80vh !important;
+}
+
+/* ===== PERFORMANCE TUNING: smoother UI without changing look too much ===== */
+/* Disable the large animated blob background to reduce paint cost */
+body::before {
+	background: none !important;
+	filter: none !important;
+	animation: none !important;
+}
+
+/* Use a lighter blur for glass surfaces */
+.card,
+.card-body,
+.alert {
+	backdrop-filter: blur(8px) !important;
+	-webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* Replace animated sheen with a static, subtle gradient */
+.card::after {
+	background: linear-gradient(
+		180deg,
+		rgba(255, 255, 255, 0.06),
+		rgba(255, 255, 255, 0)
+	) !important;
+	mix-blend-mode: normal !important;
+	opacity: 0.4 !important;
+	filter: none !important;
+	transform: none !important;
+	animation: none !important;
+}
+
+/* Slightly lighter navbar blur */
+.navbar {
+	backdrop-filter: blur(6px) !important;
+	-webkit-backdrop-filter: blur(6px) !important;
+}
+
+/* Gentler animations for performance */
+.fade-in {
+	animation-duration: 0.4s !important;
+}
+.slide-in-left,
+.slide-in-right {
+	animation-duration: 0.5s !important;
+}
+.float {
+	animation-duration: 8s !important;
 }

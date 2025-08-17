@@ -173,7 +173,6 @@ PIPELINE_STEPS_TECHNICAL = [
 ]
 
 
-
 def create_pipeline_step_card(step_data):
     image_path = os.path.join("assets", step_data["image"])
     if os.path.exists(image_path):
@@ -198,6 +197,7 @@ def make_input_card(comp_idx, comp_name):
             dbc.Row([
                 dbc.Col(dcc.Slider(
                     min=0, max=100, step=1, value=20 if comp_idx == 0 else 0,
+                    updatemode='mouseup',  # update on release for smoother UI
                     marks={0: '0', 25: '25', 50: '50', 75: '75', 100: '100'},
                     id={'type': 'percentage-slider', 'index': comp_idx}
                 ), md=9, xs=8),
@@ -205,9 +205,9 @@ def make_input_card(comp_idx, comp_name):
                     dbc.Input(
                         type="number", min=0, max=100, step=1,
                         value=20 if comp_idx == 0 else 0,
+                        debounce=True,  # reduce rapid callbacks while typing
                         id={'type': 'percentage-input', 'index': comp_idx}
                     ),
-                    dbc.InputGroupText('%')
                 ], className="mt-1 mt-md-0"), md=3, xs=4)
             ], align="center"),
             html.Hr(),
@@ -302,11 +302,12 @@ upload_style = {
     'justifyContent': 'center'
 }
 
-app.layout = html.Div(id="theme-root", className="theme-dark", children=[
+app.layout = html.Div(id="theme-root", className="theme-dark perf-smooth", children=[
     dcc.Store(id='theme-store', data='dark'),
     dcc.Store(id='pipeline-step-store-layman', data=0),
     dcc.Store(id='pipeline-step-store-technical', data=0),
-    dcc.Interval(id='landing-redirect', interval=4000, n_intervals=0, max_intervals=1),
+    dcc.Store(id='batch-pred-store'),
+    # Removed auto-redirect so the app lands and stays on Overview
 
     # Enhanced Navbar with better branding
     dbc.NavbarSimple(
@@ -401,6 +402,21 @@ app.layout = html.Div(id="theme-root", className="theme-dark", children=[
                                         className="upload-area"
                                     ),
                                     html.Div(id='upload-message', className='mb-4'),
+                                    # Batch predictions upload (multi-row, headerless)
+                                    html.Hr(style={'borderColor': 'rgba(135, 206, 235, 0.2)'}),
+                                    html.H6("📦 Batch Predictions (Headerless CSV)", className="mb-2", style={'color': '#64ffda'}),
+                                    dcc.Upload(
+                                        id='upload-batch',
+                                        children=html.Div([
+                                            html.Div([
+                                                html.I(className="bi bi-upload fs-5 me-2"),
+                                                html.Span("Upload a CSV with N rows × 55+ columns (5 concentrations + 50 properties)")
+                                            ])
+                                        ]),
+                                        style={**upload_style, 'minHeight': '70px', 'padding': '12px'},
+                                        multiple=False,
+                                        className="upload-area"
+                                    ),
                                 ]),
                                 
                                 html.Hr(style={'borderColor': 'rgba(135, 206, 235, 0.3)', 'margin': '30px 0'}),
@@ -441,7 +457,7 @@ app.layout = html.Div(id="theme-root", className="theme-dark", children=[
                                         dbc.CardHeader([
                                             html.H5(html.Div([
                                                 html.I(className="bi bi-pie-chart me-2"),
-                                                "📊 Composition Overview"
+                                                "� Composition Overview"
                                             ]), className="mb-0")
                                         ]),
                                         dbc.CardBody([
@@ -470,6 +486,26 @@ app.layout = html.Div(id="theme-root", className="theme-dark", children=[
                                             ],
                                             className="fade-in"
                                         )
+                                    ], className="fade-in slide-in-right")
+                                ], width=12),
+
+                                # Batch predictions results card (right column)
+                                dbc.Col([
+                                    dbc.Card([
+                                        dbc.CardHeader([
+                                            html.H5(html.Div([
+                                                html.I(className="bi bi-file-spreadsheet me-2"),
+                                                "📦 Batch Predictions"
+                                            ]), className="mb-0")
+                                        ]),
+                                        dbc.CardBody(id='batch-pred-result', children=[
+                                            html.Div([
+                                                html.I(className="bi bi-info-circle fs-1 mb-3", style={'color': '#64ffda'}),
+                                                html.H5("Upload a CSV for Batch Predictions", className="mb-3"),
+                                                html.P("Use the second upload above to process multiple blends at once. We'll show a summary table here and let you download output.csv.", className='text-muted')
+                                            ], className='text-center py-4'),
+                                            dcc.Download(id='download-batch-csv')
+                                        ], className="fade-in"),
                                     ], className="fade-in slide-in-right")
                                 ], width=12)
                             ]),
@@ -615,50 +651,85 @@ app.layout = html.Div(id="theme-root", className="theme-dark", children=[
                     ], className="modern-container fade-in"),
                     
                     dbc.Card([
-                        dbc.Row([
-                            dbc.Col([
-                                dbc.CardBody([
-                                    html.H5(html.Div([
-                                        html.I(className="bi bi-sliders me-2"),
-                                        "📊 Analysis Controls"
-                                    ]), className="mb-4"),
-                                    dbc.Label("Visualization Type", className="fw-bold mb-2"),
-                                    dcc.Dropdown(
-                                        id="eda-type", 
-                                        options=[
-                                            {"label": "🔥 Correlation Heatmap", "value": "Correlation"},
-                                            {"label": "📊 Distribution Histogram", "value": "Histogram"}
-                                        ], 
-                                        value="Correlation",
-                                        className="mb-4"
-                                    ),
-                                    html.Div(id='eda-x-div', children=[
-                                        dbc.Label("X-Axis Variable", className="fw-bold mb-2 mt-3"),
-                                        dcc.Dropdown(
-                                            id="eda-x",
-                                            options=[
-                                                {"label": c, "value": c} for c in sorted([
-                                                    col for col in DF_EDA.columns
-                                                    if ("Component" in col or "BlendProperty" in col) and "Weighted" not in col
-                                                ])
-                                            ] if not DF_EDA.empty else [],
-                                            className="mb-3"
+                        dbc.CardBody([
+                            dbc.Tabs(
+                                id="eda-sub-tabs",
+                                active_tab="eda-tab-corr",
+                                className="dash-tabs",
+                                children=[
+                                    dbc.Tab(label="🔥 Correlation Heatmap", tab_id="eda-tab-corr", tab_style=tab_style, active_tab_style=active_tab_style, children=[
+                                        dcc.Loading(
+                                            dcc.Graph(id="eda-graph-corr", style={"height": "80vh"}),
+                                            type="default"
                                         )
                                     ]),
-                                    html.Hr(),
-                                    html.Div([
-                                        html.H6("📋 Dataset Info", className="mb-2"),
-                                        html.P(f"Records: {len(DF_EDA)}", className="small mb-1"),
-                                        html.P(f"Features: {len(DF_EDA.columns) if not DF_EDA.empty else 0}", className="small mb-0")
-                                    ], style={'color': '#b0bec5'})
-                                ])
-                            ], width=3),
-                            dbc.Col([
-                                dcc.Loading(
-                                    dcc.Graph(id="eda-graph", style={"height": "80vh"}),
-                                    type="default"
-                                )
-                            ], width=9)
+                                    dbc.Tab(label="📊 Distribution Histogram", tab_id="eda-tab-hist", tab_style=tab_style, active_tab_style=active_tab_style, children=[
+                                        dbc.Row([
+                                            dbc.Col(
+                                                dbc.Card(
+                                                    dbc.CardBody([
+                                                        dbc.Label("Variable", className="fw-bold mb-2"),
+                                                        dcc.Dropdown(
+                                                            id="eda-hist-x",
+                                                            options=[
+                                                                {"label": c, "value": c} for c in sorted([
+                                                                    col for col in DF_EDA.columns
+                                                                    if ("Component" in col or "BlendProperty" in col) and "Weighted" not in col
+                                                                ])
+                                                            ] if not DF_EDA.empty else [],
+                                                            value=None,
+                                                            optionHeight=36,
+                                                            className="mb-3 eda-hist-dropdown"
+                                                        )
+                                                    ]),
+                                                    className="mb-3 eda-card"
+                                                ),
+                                                width=12
+                                            )
+                                        ]),
+                                        dcc.Loading(
+                                            dcc.Graph(id="eda-graph-hist", style={"height": "80vh"}),
+                                            type="default"
+                                        )
+                                    ]),
+                    dbc.Tab(label="🔵 Scatter Plots", tab_id="eda-tab-scatter", tab_style=tab_style, active_tab_style=active_tab_style, children=[
+                                        dbc.Row([
+                                            dbc.Col(
+                        dbc.Card(
+                                                    dbc.CardBody([
+                                                        dbc.Label("X-Axis Variable", className="fw-bold mb-2"),
+                                                        dcc.Dropdown(
+                                                            id="eda-scatter-x",
+                                                            options=[
+                                                                {"label": c, "value": c} for c in sorted(DF_EDA.columns)
+                                                            ] if not DF_EDA.empty else [],
+                                value=None,
+                                optionHeight=36,
+                                className="mb-3 eda-scatter-dropdown"
+                                                        ),
+                                                        dbc.Label("Y-Axis Variable", className="fw-bold mb-2 mt-3"),
+                                                        dcc.Dropdown(
+                                                            id="eda-scatter-y",
+                                                            options=[
+                                                                {"label": c, "value": c} for c in sorted(DF_EDA.columns)
+                                                            ] if not DF_EDA.empty else [],
+                                value=None,
+                                optionHeight=36,
+                                className="mb-3 eda-scatter-dropdown"
+                                                        ),
+                                                    ]),
+                            className="mb-3 eda-card"
+                                                ),
+                                                width=12
+                                            )
+                                        ]),
+                                        dcc.Loading(
+                                            dcc.Graph(id="eda-graph-scatter", style={"height": "80vh"}),
+                                            type="default"
+                                        )
+                                    ]),
+                                ]
+                            )
                         ])
                     ], body=True, className="mt-4 fade-in")
                 ])
@@ -756,40 +827,58 @@ def sync_percentages_and_upload(slider_vals, input_vals, contents, filename, pro
 
 
 @app.callback(
-    Output("eda-x-div", "style"),
-    Input("eda-type", "value")
-)
-def update_eda_controls_visibility(plot_type):
-    return {'display': 'block'} if plot_type == "Histogram" else {'display': 'none'}
-
-
-@app.callback(
-    Output("eda-graph", "figure"),
-    Input("eda-type", "value"),
-    Input("eda-x", "value"),
+    Output("eda-graph-corr", "figure"),
+    Output("eda-graph-hist", "figure"),
+    Output("eda-graph-scatter", "figure"),
+    Input("eda-sub-tabs", "active_tab"),
+    Input("eda-hist-x", "value"),
+    Input("eda-scatter-x", "value"),
+    Input("eda-scatter-y", "value"),
     Input('theme-store', 'data')
 )
-def update_eda_graph(plot_type, x_col, theme):
+def update_eda_graphs(active_tab, hist_x, scatter_x, scatter_y, theme):
     tpl = custom_template_light if theme == 'light' else custom_template
+    empty_fig = go.Figure().update_layout(template=tpl)
     if DF_EDA.empty:
-        return go.Figure().update_layout(title_text="Dataset Not Loaded", template=tpl)
-    if plot_type == "Correlation":
-        corr = DF_EDA.corr(numeric_only=True)
-        fig = px.imshow(
-            corr, text_auto=".2f", title="Correlation Matrix",
-            color_continuous_scale=px.colors.sequential.Teal
-        )
-        fig.update_layout(height=max(600, len(corr.columns) * 25))
-    elif plot_type == "Histogram" and x_col:
-        fig = px.histogram(
-            DF_EDA, x=x_col, title=f"Distribution of {x_col}",
+        nf = go.Figure().update_layout(title_text="Dataset Not Loaded", template=tpl)
+        return nf, nf, nf
+
+    # Correlation
+    corr = DF_EDA.corr(numeric_only=True)
+    fig_corr = px.imshow(
+        corr, text_auto=".2f", title="Correlation Matrix",
+        color_continuous_scale=px.colors.sequential.Teal
+    )
+    fig_corr.update_layout(height=max(600, len(corr.columns) * 25), template=tpl)
+
+    # Histogram
+    if hist_x:
+        fig_hist = px.histogram(
+            DF_EDA, x=hist_x, title=f"Distribution of {hist_x}",
             color_discrete_sequence=['#64ffda']
         )
+        fig_hist.update_layout(template=tpl)
     else:
-        fig = go.Figure().update_layout(title_text="Select plot options")
+        fig_hist = empty_fig.update_layout(title_text="Select a variable for histogram")
 
-    fig.update_layout(template=tpl)
-    return fig
+    # Scatter
+    if scatter_x and scatter_y:
+        # Theme-aware point styling for visibility and consistency
+        point_color = '#1976d2' if theme == 'light' else '#64ffda'  # blue in light, teal in dark
+        outline_color = 'rgba(27,42,65,0.6)' if theme == 'light' else 'rgba(255,255,255,0.35)'
+        fig_scatter = px.scatter(
+            DF_EDA, x=scatter_x, y=scatter_y,
+            title=f"Scatter: {scatter_x} vs {scatter_y}",
+            color_discrete_sequence=[point_color]
+        )
+        fig_scatter.update_traces(
+            marker=dict(size=7, opacity=0.85, line=dict(color=outline_color, width=0.8))
+        )
+        fig_scatter.update_layout(template=tpl)
+    else:
+        fig_scatter = empty_fig.update_layout(title_text="Select X and Y for scatter")
+
+    return fig_corr, fig_hist, fig_scatter
 
 
 @app.callback(
@@ -842,10 +931,15 @@ def update_pie_chart(percentages, theme):
     if not active_percs:
         fig.update_layout(title_text="Set component percentages", title_x=0.5)
     else:
+        # Theme-aware text color for labels (inside and outside)
+        text_color = '#1b2a41' if theme == 'light' else '#e6f2ff'
         fig.add_trace(go.Pie(
             labels=active_comps, values=active_percs, title="Concentration", hole=0.4,
             marker=dict(colors=px.colors.qualitative.Plotly), textinfo='percent+label',
-            textfont=dict(color="#0b0f1a", size=14), insidetextorientation='radial'
+            textfont=dict(color=text_color, size=14),
+            insidetextfont=dict(color=text_color),
+            outsidetextfont=dict(color=text_color),
+            insidetextorientation='radial'
         ))
         fig.update_layout(showlegend=False)
 
@@ -970,6 +1064,119 @@ def run_manual_prediction(n_clicks, percentages, props, theme):
         return dbc.Alert(f"An unexpected error occurred: {e}", color="danger")
 
 
+# ===== Batch Predictions (multi-row CSV) =====
+def _build_features_from_row(row_values: np.ndarray):
+    # Expect: first 5 = concentrations, next 50 = 5 components × 10 properties
+    if row_values.shape[0] < 55:
+        raise ValueError("Row must have at least 55 values: 5 percentages + 50 properties")
+    percentages = np.array(row_values[:5], dtype=float)
+    props_flat = np.array(row_values[5:55], dtype=float)
+    props_array = props_flat.reshape(len(COMPONENTS), len(PROPERTIES))
+    total_pct = np.sum(np.nan_to_num(percentages))
+    if total_pct <= 0:
+        raise ValueError("Total concentration is 0")
+    weights = percentages / total_pct
+    feature_dict = {}
+    for j in range(len(COMPONENTS)):
+        feature_dict[f"Component{j+1}_fraction"] = float(weights[j])
+        for i in range(len(PROPERTIES)):
+            val = float(props_array[j, i])
+            feature_dict[f"Component{j+1}_Property{i+1}"] = val
+            feature_dict[f"Component{j+1}_Weighted_Property{i+1}"] = float(weights[j] * val)
+    for i in range(len(PROPERTIES)):
+        prop_i_values = props_array[:, i]
+        feature_dict[f"Weighted_Property_{i+1}"] = float(np.dot(weights, prop_i_values))
+        feature_dict[f"Prop{i+1}_mean"] = float(np.mean(prop_i_values))
+        feature_dict[f"Prop{i+1}_std"] = float(np.std(prop_i_values))
+    return feature_dict
+
+
+@app.callback(
+    Output('batch-pred-store', 'data'),
+    Output('batch-pred-result', 'children'),
+    Input('upload-batch', 'contents'),
+    State('upload-batch', 'filename'),
+    State('theme-store', 'data'),
+    prevent_initial_call=True
+)
+def on_batch_upload(contents, filename, theme):
+    if not contents:
+        raise dash.exceptions.PreventUpdate
+    # Parse CSV as headerless
+    df = parse_contents_headerless(contents, filename)
+    if not isinstance(df, pd.DataFrame):
+        # df is an Alert
+        return None, df
+    if df.shape[1] < 55:
+        return None, dbc.Alert("CSV must have at least 55 columns (5 percentages + 50 properties)", color="danger")
+
+    # Build features per row
+    feats = []
+    errors = []
+    for idx, row in df.iterrows():
+        try:
+            feats.append(_build_features_from_row(row.values))
+        except Exception as e:
+            errors.append((idx, str(e)))
+            feats.append(None)
+
+    # Predict per row
+    results = []
+    for idx, fdict in enumerate(feats):
+        if fdict is None:
+            results.append({"Row": idx, "Error": errors[-1][1] if errors else "Invalid row"})
+            continue
+        input_df = pd.DataFrame([fdict])
+        row_out = {"Row": idx}
+        for prop_folder, ens in ENSEMBLES.items():
+            try:
+                final, std, _ = ens.predict(input_df)
+                row_out[f"{prop_folder}_Pred"] = float(np.round(final.ravel()[0], 6))
+                row_out[f"{prop_folder}_Std"] = float(np.round(std.ravel()[0], 6))
+            except Exception as e:
+                row_out[f"{prop_folder}_Pred"] = None
+                row_out[f"{prop_folder}_Std"] = None
+                row_out[f"{prop_folder}_Error"] = str(e)
+        results.append(row_out)
+
+    out_df = pd.DataFrame(results)
+
+    table_style = get_datatable_style(theme)
+    table = dash_table.DataTable(
+        data=out_df.to_dict('records'),
+        columns=[{"name": c, "id": c} for c in out_df.columns],
+        **table_style,
+        style_table={'overflowX': 'scroll', 'minWidth': '100%'},
+        page_size=10
+    )
+
+    body = [
+        html.Div([
+            html.P(f"Processed {len(df)} rows from {filename}.", className='text-muted'),
+            dbc.Button(html.Div([
+                html.I(className="bi bi-download me-2"),
+                "Download output.csv"
+            ]), id='btn-download-batch', color='primary', className='mb-3')
+        ], className='d-flex justify-content-between align-items-center'),
+        html.Div(table)
+    ]
+    # Store CSV in memory as records
+    return out_df.to_dict('records'), body
+
+
+@app.callback(
+    Output('download-batch-csv', 'data'),
+    Input('btn-download-batch', 'n_clicks'),
+    State('batch-pred-store', 'data'),
+    prevent_initial_call=True
+)
+def download_batch(n_clicks, data_records):
+    if not data_records:
+        raise dash.exceptions.PreventUpdate
+    df = pd.DataFrame(data_records)
+    return dcc.send_data_frame(df.to_csv, 'output.csv', index=False)
+
+
 # Theme switch: persist selection and toggle class on root
 @app.callback(
     Output('theme-store', 'data'),
@@ -986,7 +1193,8 @@ def on_theme_toggle(value):
     Input('theme-store', 'data')
 )
 def update_theme_class(theme):
-    return f"theme-{theme}"
+    # Keep performance class to reduce heavy effects
+    return f"theme-{theme} perf-smooth"
 
 
 @app.callback(
@@ -1144,15 +1352,11 @@ def render_overview_graph(theme):
 @app.callback(
     Output('main-tabs', 'active_tab'),
     Input('get-started-btn', 'n_clicks'),
-    Input('landing-redirect', 'n_intervals'),
     State('main-tabs', 'active_tab'),
     prevent_initial_call=True
 )
-def route_from_landing(n_clicks, n_intervals, active):
-    trig = ctx.triggered_id
-    if trig == 'get-started-btn' and n_clicks:
-        return 'tab-workbench'
-    if trig == 'landing-redirect' and active == 'tab-home' and n_intervals:
+def route_from_landing(n_clicks, active):
+    if ctx.triggered_id == 'get-started-btn' and n_clicks:
         return 'tab-workbench'
     raise dash.exceptions.PreventUpdate
 
