@@ -1,4 +1,4 @@
-# 🚀 EcoFuelFusion — Interactive Fuel Blend Ensemble Predictor  
+# 🚀 EcoFuelFusion.ai — Interactive Fuel Blend Ensemble Predictor  
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)  
 ![Dash](https://img.shields.io/badge/Dash-Framework-0098ff.svg)  
@@ -51,9 +51,9 @@ The predictor forecasts **10 blend properties** for user-defined or uploaded fue
 For each property (`BlendProperty1` → `BlendProperty10`):  
 
 - **Weighted Properties**  
-  ```math
-  Weighted_Property_i = Σ (Component_j_fraction × Component_j_Property_i), j=1..5
-  ```
+
+Weighted\_Property\_i = Σ (Component\_{j}\_fraction × Component\_{j}\_Property\_{i}), j = 1..5
+
 
 - **Statistical Features**  
   - Mean across 5 components  
