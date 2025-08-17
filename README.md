@@ -193,3 +193,4 @@ Deployment instructions will be added once configuration is finalized.
 
 © 2025 **EcoFuelFusion.ai** | All rights reserved.  
 For research and educational use only.  
+Unauthorized copying, modification, or distribution of this project is prohibited without explicit permission.
