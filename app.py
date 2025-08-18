@@ -1347,7 +1347,7 @@ def render_overview_graph(theme):
     fig = go.Figure()
     fig.add_trace(go.Indicator(
         mode="number+delta",
-        value=98.7,
+        value=90.8,
         number={"suffix": "%", "font": {"size": 56}},
         delta={"reference": 95, "increasing": {"color": "#43a047"}},
         title={"text": "Model Confidence"}
@@ -1371,3 +1371,4 @@ def route_from_landing(n_clicks, active):
 if __name__ == "__main__":
 
     app.run(debug=True, port=8050)
+
