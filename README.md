@@ -124,7 +124,7 @@ EcoFuelFusion.ai/
 | Deep Learning | `PyTorch`                                                                      |
 | Optimization  | `Optuna`                                                                       |
 | Data Handling | `pandas`, `numpy`                                                              |
-| Deployment    | [Render](https://render.com/) (planned)                                        |
+| Deployment    | [Google Cloud](https://console.cloud.google.com/) (planned)                                        |
 | Frontend      | `CSS` (themes, glassmorphism), `JavaScript` (scrolling & animations)           |
 
 ---
