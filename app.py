@@ -1349,7 +1349,7 @@ def render_overview_graph(theme):
         mode="number+delta",
         value=90.8,
         number={"suffix": "%", "font": {"size": 56}},
-        delta={"reference": 95, "increasing": {"color": "#43a047"}},
+        delta=None,
         title={"text": "Model Confidence"}
     ))
     fig.update_layout(height=300, template=tpl)
@@ -1371,4 +1371,5 @@ def route_from_landing(n_clicks, active):
 if __name__ == "__main__":
 
     app.run(debug=True, port=8050)
+
 
