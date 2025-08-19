@@ -154,10 +154,11 @@ Then open: [http://127.0.0.1:8050/](http://127.0.0.1:8050/)
 
 ---
 
-## 🌐 Deployment (Planned on Render)  
+<!--## 🌐 Deployment (Planned on Render)  
 Deployment instructions will be added once configuration is finalized.  
 
 ---
+-->d
 
 ## 📈 Input Format  
 
